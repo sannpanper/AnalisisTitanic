@@ -1,3 +1,5 @@
+> **Actividad P2 (detector de intrusiones SSH con IA):** la API, la interfaz y las instrucciones están en [README_DETECTOR.md](README_DETECTOR.md).
+
 # Titanic — Análisis Exploratorio de Datos
 
 **Actividad P1 · Python para IA · 2º DAM**
