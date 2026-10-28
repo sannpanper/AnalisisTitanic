@@ -1,0 +1,22 @@
+# Datos y modelos generados por el kit del detector: se regeneran con generar_logs.py y entrenar.py
+auth*.log
+etiquetas*.csv
+*.joblib
+peticion.json
+
+# Entornos virtuales y cachés
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Claves y configuración local
+.env
+*.key
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

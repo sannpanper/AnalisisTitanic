@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detector de intrusiones SSH</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div>
+    <h1>Detector de intrusiones SSH</h1>
+    <p class="subtitulo">Analiza un <code>auth.log</code> y señala las IPs sospechosas. Solo informa: la decisión final es de una persona.</p>
+  </div>
+  <div id="estado-api" class="estado estado--espera" aria-live="polite">
+    <span class="punto"></span><span id="estado-api-texto">Comprobando API…</span>
+  </div>
+</header>
+
+<main class="contenido">
+
+  <!-- ================= Entrada ================= -->
+  <section class="panel">
+    <h2>1. Log a analizar</h2>
+
+    <div class="fila-botones">
+      <label class="boton boton--secundario" for="fichero">Cargar fichero…</label>
+      <input type="file" id="fichero" accept=".log,.txt,text/plain" hidden>
+      <button type="button" class="boton boton--secundario" id="btn-ejemplo">Cargar ejemplo</button>
+      <button type="button" class="boton boton--texto" id="btn-limpiar">Limpiar</button>
+      <span id="nombre-fichero" class="pista"></span>
+    </div>
+
+    <label for="lineas" class="etiqueta">O pega aquí las líneas del log</label>
+    <textarea id="lineas" rows="10" spellcheck="false"
+      placeholder="Oct  7 10:15:32 srv-web01 sshd[1234]: Failed password for invalid user admin from 203.0.113.45 port 51234 ssh2"></textarea>
+    <div class="pista" id="contador-lineas">0 líneas</div>
+  </section>
+
+  <!-- ================= Parámetros ================= -->
+  <section class="panel">
+    <h2>2. Parámetros</h2>
+
+    <div class="campo">
+      <label for="umbral-num" class="etiqueta">Umbral de decisión
+        <span class="ayuda">probabilidad mínima para marcar una IP (0 – 1)</span>
+      </label>
+      <div class="umbral">
+        <input type="range" id="umbral-rango" min="0" max="1" step="0.01" value="0.7" aria-label="Umbral (deslizador)">
+        <input type="number" id="umbral-num" min="0" max="1" step="0.01" value="0.7">
+      </div>
+      <div class="pista">Bajo = detecta más, pero más falsos positivos · Alto = más estricto, se pueden colar atacantes</div>
+    </div>
+
+    <div class="campo">
+      <label for="lista-blanca" class="etiqueta">Lista blanca
+        <span class="ayuda">IPs que nunca se marcan, separadas por comas o líneas</span>
+      </label>
+      <textarea id="lista-blanca" rows="2" spellcheck="false" placeholder="192.168.1.250, 10.0.0.5"></textarea>
+    </div>
+
+    <details class="avanzado">
+      <summary>Opciones avanzadas</summary>
+      <div class="campo">
+        <label for="api-url" class="etiqueta">URL de la API</label>
+        <div class="fila-botones">
+          <input type="url" id="api-url" placeholder="http://127.0.0.1:8000">
+          <button type="button" class="boton boton--secundario" id="btn-salud">Comprobar</button>
+        </div>
+      </div>
+      <label class="check">
+        <input type="checkbox" id="sin-validar">
+        Enviar sin validar en el navegador (para probar los errores que devuelve la API)
+      </label>
+    </details>
+
+    <div class="fila-botones fila-botones--final">
+      <button type="button" class="boton boton--primario" id="btn-analizar">Analizar</button>
+      <span id="cargando" class="pista" hidden>Analizando…</span>
+    </div>
+  </section>
+
+  <!-- ================= Resultado ================= -->
+  <section class="panel panel--resultado" id="resultado" hidden>
+    <h2>3. Resultado</h2>
+
+    <div id="error" class="error" role="alert" hidden>
+      <strong id="error-titulo"></strong>
+      <p id="error-texto"></p>
+    </div>
+
+    <div id="salida" hidden>
+      <div class="tarjetas">
+        <div class="tarjeta"><span class="tarjeta__valor" id="r-recibidas">–</span><span class="tarjeta__nombre">líneas enviadas</span></div>
+        <div class="tarjeta"><span class="tarjeta__valor" id="r-ignoradas">–</span><span class="tarjeta__nombre">líneas ignoradas</span></div>
+        <div class="tarjeta"><span class="tarjeta__valor" id="r-ips">–</span><span class="tarjeta__nombre">IPs analizadas</span></div>
+        <div class="tarjeta tarjeta--alerta"><span class="tarjeta__valor" id="r-sospechosas">–</span><span class="tarjeta__nombre">IPs sospechosas</span></div>
+      </div>
+
+      <div class="fila-botones fila-botones--tabla">
+        <span class="pista" id="r-resumen"></span>
+        <button type="button" class="boton boton--texto" id="btn-csv">Descargar CSV</button>
+      </div>
+
+      <div class="tabla-envoltorio">
+        <table class="tabla" id="tabla">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th><button type="button" class="orden" data-col="ip">IP</button></th>
+              <th><button type="button" class="orden" data-col="probabilidad">Probabilidad</button></th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-cuerpo"></tbody>
+        </table>
+        <p id="sin-sospechosas" class="vacio" hidden>Ninguna IP supera el umbral. Prueba a bajarlo para ver candidatos con menos probabilidad.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="pie">Proyecto DAM · Python para IA · La interfaz consume la API REST del detector (<code>GET /salud</code>, <code>POST /analizar</code>); no carga el modelo directamente.</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
