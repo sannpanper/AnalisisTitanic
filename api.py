@@ -11,12 +11,16 @@ from typing import List
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from logtools import cargar_lineas, construir_features
 
 RUTA_MODELO = Path(os.getenv("MODELO_PATH", "modelo.joblib"))
-MAX_LINEAS = 10000
+# Un auth.log generado con el kit tiene entre 12.000 y 16.000 líneas: el límite debe admitir un log completo.
+MAX_LINEAS = 50000
+RUTA_INTERFAZ = Path(__file__).resolve().parent / "interfaz"
 modelo = None
 
 
@@ -40,6 +44,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Integración con la interfaz: permite llamadas desde otro origen (por ejemplo, index.html abierto desde el disco).
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 class SolicitudAnalisis(BaseModel):
@@ -89,7 +96,8 @@ def salud():
     if modelo is None:
         raise HTTPException(status_code=503, detail="El modelo todavía no está cargado")
     caracteristicas = list(getattr(modelo, "feature_names_in_", []))
-    return {"estado": "ok", "modelo_cargado": True, "caracteristicas": caracteristicas}
+    return {"estado": "ok", "modelo_cargado": True, "caracteristicas": caracteristicas,
+            "umbral_por_defecto": 0.7, "max_lineas": MAX_LINEAS}
 
 
 @app.post("/analizar")
@@ -143,3 +151,9 @@ def analizar(solicitud: SolicitudAnalisis):
         "ips_analizadas": int(len(caracteristicas)),
         "sospechosas": sospechosas,
     }
+
+
+# Integración con la interfaz: la propia API sirve la carpeta interfaz/ en http://127.0.0.1:8000/
+# Se monta al final para no tapar las rutas /salud y /analizar.
+if RUTA_INTERFAZ.is_dir():
+    app.mount("/", StaticFiles(directory=RUTA_INTERFAZ, html=True), name="interfaz")
